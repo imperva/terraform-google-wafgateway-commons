@@ -160,6 +160,6 @@ locals {
 }
 
 module "commons" {
-  source = "../../waf-global-commons"
+  source = "imperva/commons/wafgateway"
   platform = "gcp"
 }
