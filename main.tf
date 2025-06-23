@@ -31,28 +31,16 @@ locals {
       model_throughput_capping = {
         GV1000 = 100 / 8 * 1000 * 1000 # 100 Mbps to bytes conversion
         GV2500 = 500 / 8 * 1000 * 1000 # 500 Mbps to bytes conversion
-      }      
+      }
     }
     global = module.commons.constants.global
   }
-
   raw_builds = {
     for build_data in module.commons.available_builds.builds: 
     "${build_data.build}${build_data.location == "us" ? "" : "-${build_data.location}"}" => replace(build_data.link, local.constants.gcp.image_url_prefix, "")
+    if contains(local.options.waf.supported_versions, build_data.build)
   }
-  semver_builds = provider::semvers::sort([for build, link in local.raw_builds: "${join(".", split(".0.", build))}+${link}"])
-  lts_builds = [for build in local.semver_builds: build if startswith(build, "14")]
-  non_lts_builds = [for build in local.semver_builds: build if startswith(build, "15")]
-  selectable_builds = merge(
-    local.raw_builds,
-    length(local.lts_builds) > 0 ? {
-      "latest_lts" = split("+", local.lts_builds[length(local.lts_builds) - 1])[1]
-    } : {},
-    length(local.non_lts_builds) > 0 ? {
-      "latest" = split("+", local.non_lts_builds[length(local.non_lts_builds) - 1])[1]
-    } : {}
-  )
-
+  selectable_builds = local.raw_builds
   options = {
     gcp = {
       mx_instance_types = [
@@ -94,6 +82,16 @@ locals {
           "REGIONAL"
         ]
       }
+    }
+    waf = {
+      supported_versions = [
+        "14.7.0.110",
+        "14.7.0.120",
+        "14.7.0.130",
+        "15.2.0.10",
+        "15.3.0.10",
+        "15.3.0.20"
+      ]
     }
     global = module.commons.options.global
   }
